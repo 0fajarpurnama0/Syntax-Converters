@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Code Converter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="js-yaml-4.1.0.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Code Converter</h1>
+            <p>Convert data formats securely in your browser.</p>
+        </header>
+
+        <div class="controls">
+            <div class="select-group">
+                <label for="sourceLang">From:</label>
+                <select id="sourceLang">
+                    <option value="json">JSON</option>
+                    <option value="yaml">YAML</option>
+                    </select>
+            </div>
+
+            <button id="swapBtn">⇄</button>
+
+            <div class="select-group">
+                <label for="targetLang">To:</label>
+                <select id="targetLang">
+                    <option value="yaml">YAML</option>
+                    <option value="json">JSON</option>
+                     </select>
+            </div>
+            
+            <button id="convertBtn">Convert</button>
+        </div>
+
+        <div class="editor-container">
+    
+            <div class="editor-box">
+                <div class="box-header">
+                    <label>Input</label>
+                    <input type="file" id="fileInput" style="display: none;">
+                    <button id="uploadBtn" class="icon-btn" title="Upload File">📂 Upload</button>
+                </div>
+                <textarea id="inputArea" placeholder="Paste your code here..."></textarea>
+            </div>
+
+            <div class="editor-box">
+                <div class="box-header">
+                    <label>Output</label>
+                    <div class="action-buttons">
+                        <button id="copyBtn" class="icon-btn" title="Copy to Clipboard">📋 Copy</button>
+                        <button id="downloadBtn" class="icon-btn" title="Download File">💾 Download</button>
+                    </div>
+                </div>
+                <textarea id="outputArea" readonly placeholder="Result will appear here..."></textarea>
+            </div>
+
+        </div>
+        
+        <div id="statusMsg"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+:root {
+    --bg-color: #1e1e1e;
+    --card-bg: #252526;
+    --text-color: #d4d4d4;
+    --accent: #007acc;
+    --border: #3c3c3c;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+header h1 { margin: 0; font-size: 1.5rem; }
+header p { margin: 5px 0 0; color: #888; font-size: 0.9rem; }
+
+/* Controls Bar */
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--card-bg);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.select-group { display: flex; align-items: center; gap: 8px; }
+
+select, button {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #333;
+    color: white;
+    cursor: pointer;
+}
+
+button#convertBtn {
+    background-color: var(--accent);
+    border: none;
+    font-weight: bold;
+    margin-left: auto; /* Pushes button to the right */
+}
+
+button:hover { opacity: 0.9; }
+
+/* Editor Areas */
+.editor-container {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    min-height: 0; /* Important for flex scrolling */
+}
+
+.editor-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+textarea {
+    flex: 1;
+    background-color: var(--card-bg);
+    color: #cecece;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    resize: none;
+}
+
+textarea:focus { outline: 1px solid var(--accent); }
+
+#statusMsg { color: #f48771; height: 20px; font-size: 0.9rem; }
+
+/* Mobile Support */
+@media (max-width: 768px) {
+    .editor-container { flex-direction: column; }
+    .controls { flex-wrap: wrap; }
+}
+
+.editor-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    position: relative; /* Setup for positioning if needed */
+}
+
+/* New Header Styles */
+.box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.box-header label {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    color: #aaa;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background: #333;
+    color: white;
+    border-color: #666;
+}
+
+.icon-btn:active {
+    transform: translateY(1px);
+}
