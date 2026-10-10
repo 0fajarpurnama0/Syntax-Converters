@@ -13,6 +13,42 @@ const converters = {
         return JSON.stringify(obj, null, 2); // Indent with 2 spaces
     },
     
+    'pgn-youtube': (input) => {
+        // 1. Remove PGN header lines (lines starting with '[')
+        // and join all remaining lines into a single string
+        const movesText = input
+            .split('\n')
+            .filter(line => !line.trim().startsWith('['))
+            .join(' ');
+
+        // 2. Regex to capture the move notation (d4, O-O, Qxf7+, etc.)
+        // and its corresponding [%timestamp X] value
+        const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%timestamp\s+(\d+)\].*?\}/g;
+
+        let totalSeconds = 0;
+        let output = "";
+        let match;
+
+        while ((match = regex.exec(movesText)) !== null) {
+            const move = match[1];
+            const durationTenths = parseInt(match[2], 10);
+
+            // Format current totalSeconds to MM:SS
+            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const secs = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+
+            output += `${mins}:${secs} ${move}\n`;
+
+            // Accumulate time for the next move
+            totalSeconds += (durationTenths / 10);
+        }
+
+        if (!output) {
+            throw new Error("No valid moves with [%timestamp] tags found.");
+        }
+
+        return output.trim();
+    },
     // Future expansion examples:
     // 'csv-json': (input) => { ... },
     // 'json-xml': (input) => { ... },
