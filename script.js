@@ -14,40 +14,96 @@ const converters = {
     },
     
     'pgn-youtube': (input) => {
-        // 1. Remove PGN header lines (lines starting with '[')
-        // and join all remaining lines into a single string
+        // Remove PGN header lines (lines starting with '[') and join remaining text
         const movesText = input
             .split('\n')
             .filter(line => !line.trim().startsWith('['))
             .join(' ');
 
-        // 2. Regex to capture the move notation (d4, O-O, Qxf7+, etc.)
-        // and its corresponding [%timestamp X] value
-        const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%timestamp\s+(\d+)\].*?\}/g;
+        // --- OPTION A: Handle [%timestamp X] format ---
+        if (input.includes('[%timestamp')) {
+            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%timestamp\s+(\d+)\].*?\}/g;
+            let totalSeconds = 0;
+            let output = "";
+            let match;
 
-        let totalSeconds = 0;
-        let output = "";
-        let match;
+            while ((match = regex.exec(movesText)) !== null) {
+                const move = match[1];
+                const durationTenths = parseInt(match[2], 10);
 
-        while ((match = regex.exec(movesText)) !== null) {
-            const move = match[1];
-            const durationTenths = parseInt(match[2], 10);
+                const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const secs = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
 
-            // Format current totalSeconds to MM:SS
-            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-            const secs = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+                output += `${mins}:${secs} ${move}\n`;
+                totalSeconds += (durationTenths / 10);
+            }
 
-            output += `${mins}:${secs} ${move}\n`;
-
-            // Accumulate time for the next move
-            totalSeconds += (durationTenths / 10);
+            if (!output) throw new Error("No valid moves with [%timestamp] tags found.");
+            return output.trim();
         }
 
-        if (!output) {
-            throw new Error("No valid moves with [%timestamp] tags found.");
+        // --- OPTION B: Handle [%clk HH:MM:SS] format ---
+        if (input.includes('[%clk')) {
+            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%clk\s+([\d:]+)\].*?\}/g;
+
+            // Extract base time and increment from [TimeControl "300+2"] or [TimeControl "300"]
+            const tcMatch = input.match(/\[TimeControl\s+"(\d+)(?:\+(\d+))?"\]/);
+            let initialTime = tcMatch ? parseInt(tcMatch[1], 10) : null;
+            const increment = (tcMatch && tcMatch[2]) ? parseInt(tcMatch[2], 10) : 0;
+
+            const parseClkToSeconds = (clkStr) => {
+                const parts = clkStr.split(':').map(Number);
+                if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+                if (parts.length === 2) return parts[0] * 60 + parts[1];
+                return 0;
+            };
+
+            let match;
+            const matches = [];
+            while ((match = regex.exec(movesText)) !== null) {
+                matches.push({ move: match[1], clk: match[2] });
+            }
+
+            if (matches.length === 0) throw new Error("No valid moves with [%clk] tags found.");
+
+            // Infer starting clock if not specified in TimeControl header
+            if (initialTime === null) {
+                initialTime = parseClkToSeconds(matches[0].clk);
+            }
+
+            let whitePrev = initialTime;
+            let blackPrev = initialTime;
+            let totalElapsed = 0;
+            let output = "";
+            let isWhite = true;
+
+            for (const item of matches) {
+                const clkSecs = parseClkToSeconds(item.clk);
+
+                const mins = String(Math.floor(totalElapsed / 60)).padStart(2, '0');
+                const secs = String(Math.floor(totalElapsed % 60)).padStart(2, '0');
+
+                output += `${mins}:${secs} ${item.move}\n`;
+
+                let duration = 0;
+                if (isWhite) {
+                    if (clkSecs > whitePrev) whitePrev = clkSecs;
+                    duration = whitePrev - clkSecs + increment;
+                    whitePrev = clkSecs;
+                } else {
+                    if (clkSecs > blackPrev) blackPrev = clkSecs;
+                    duration = blackPrev - clkSecs + increment;
+                    blackPrev = clkSecs;
+                }
+
+                if (duration > 0) totalElapsed += duration;
+                isWhite = !isWhite;
+            }
+
+            return output.trim();
         }
 
-        return output.trim();
+        throw new Error("No [%timestamp] or [%clk] comments found in the provided PGN.");
     },
     // Future expansion examples:
     // 'csv-json': (input) => { ... },
