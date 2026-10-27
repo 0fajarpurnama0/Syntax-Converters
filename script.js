@@ -14,15 +14,23 @@ const converters = {
     },
     
     'pgn-youtube': (input) => {
-        // Remove PGN header lines (lines starting with '[') and join remaining text
+        // 1. Strip PGN headers (lines starting with '[') and unify spacing
         const movesText = input
             .split('\n')
             .filter(line => !line.trim().startsWith('['))
             .join(' ');
 
-        // --- OPTION A: Handle [%timestamp X] format ---
+        // Helper: Convert H:MM:SS or MM:SS to total seconds
+        const parseTimeToSeconds = (timeStr) => {
+            const parts = timeStr.split(':').map(Number);
+            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            if (parts.length === 2) return parts[0] * 60 + parts[1];
+            return 0;
+        };
+
+        // --- OPTION A: Handle [%timestamp X] (tenths of a second) ---
         if (input.includes('[%timestamp')) {
-            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%timestamp\s+(\d+)\].*?\}/g;
+            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[%timestamp\s+(\d+)\].*?\}/g;
             let totalSeconds = 0;
             let output = "";
             let match;
@@ -42,21 +50,36 @@ const converters = {
             return output.trim();
         }
 
-        // --- OPTION B: Handle [%clk HH:MM:SS] format ---
-        if (input.includes('[%clk')) {
-            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[\%clk\s+([\d:]+)\].*?\}/g;
+        // --- OPTION B: Handle [%emt H:MM:SS] (Elapsed Move Time) ---
+        if (input.includes('[%emt')) {
+            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[%emt\s+([\d:]+)\].*?\}/g;
+            let totalSeconds = 0;
+            let output = "";
+            let match;
 
-            // Extract base time and increment from [TimeControl "300+2"] or [TimeControl "300"]
+            while ((match = regex.exec(movesText)) !== null) {
+                const move = match[1];
+                const durationSecs = parseTimeToSeconds(match[2]);
+
+                const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const secs = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+
+                output += `${mins}:${secs} ${move}\n`;
+                totalSeconds += durationSecs;
+            }
+
+            if (!output) throw new Error("No valid moves with [%emt] tags found.");
+            return output.trim();
+        }
+
+        // --- OPTION C: Handle [%clk H:MM:SS] (Remaining Clock Time) ---
+        if (input.includes('[%clk')) {
+            const regex = /([a-zA-Z0-9\-+=#]+)\s*\{[^}]*?\[%clk\s+([\d:]+)\].*?\}/g;
+
+            // Extract initial time & increment if specified in [TimeControl "300+2"]
             const tcMatch = input.match(/\[TimeControl\s+"(\d+)(?:\+(\d+))?"\]/);
             let initialTime = tcMatch ? parseInt(tcMatch[1], 10) : null;
             const increment = (tcMatch && tcMatch[2]) ? parseInt(tcMatch[2], 10) : 0;
-
-            const parseClkToSeconds = (clkStr) => {
-                const parts = clkStr.split(':').map(Number);
-                if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-                if (parts.length === 2) return parts[0] * 60 + parts[1];
-                return 0;
-            };
 
             let match;
             const matches = [];
@@ -66,9 +89,8 @@ const converters = {
 
             if (matches.length === 0) throw new Error("No valid moves with [%clk] tags found.");
 
-            // Infer starting clock if not specified in TimeControl header
             if (initialTime === null) {
-                initialTime = parseClkToSeconds(matches[0].clk);
+                initialTime = parseTimeToSeconds(matches[0].clk);
             }
 
             let whitePrev = initialTime;
@@ -78,7 +100,7 @@ const converters = {
             let isWhite = true;
 
             for (const item of matches) {
-                const clkSecs = parseClkToSeconds(item.clk);
+                const clkSecs = parseTimeToSeconds(item.clk);
 
                 const mins = String(Math.floor(totalElapsed / 60)).padStart(2, '0');
                 const secs = String(Math.floor(totalElapsed % 60)).padStart(2, '0');
@@ -103,7 +125,7 @@ const converters = {
             return output.trim();
         }
 
-        throw new Error("No [%timestamp] or [%clk] comments found in the provided PGN.");
+        throw new Error("No [%timestamp], [%emt], or [%clk] comments found in the provided PGN.");
     },
     // Future expansion examples:
     // 'csv-json': (input) => { ... },
