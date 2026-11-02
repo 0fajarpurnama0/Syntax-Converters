@@ -125,7 +125,35 @@ const converters = {
             return output.trim();
         }
 
-        throw new Error("No [%timestamp], [%emt], or [%clk] comments found in the provided PGN.");
+        // --- OPTION D: Fallback (1 second per move) ---
+        // Strip out comments { }, variations ( ), numeric annotations $1, and match results
+        const cleanText = movesText
+            .replace(/\{[^}]*\}/g, ' ')
+            .replace(/\([^)]*\)/g, ' ')
+            .replace(/\$\d+/g, ' ')
+            .replace(/(1-0|0-1|1\/2-1\/2|\*)/g, ' ');
+
+        // Split by whitespace and filter out empty strings
+        const tokens = cleanText.split(/\s+/).filter(t => t.trim() !== '');
+
+        let totalSeconds = 0;
+        let output = "";
+
+        for (const token of tokens) {
+            // Skip move numbers (e.g., "1.", "12...", "45.")
+            if (/^\d+\.+$/.test(token)) continue;
+
+            const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const secs = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+
+            output += `${mins}:${secs} ${token}\n`;
+            
+            // Add 1 second for the next move
+            totalSeconds += 1;
+        }
+
+        if (!output) throw new Error("No valid chess moves found in the provided PGN.");
+        return output.trim();
     },
     // Future expansion examples:
     // 'csv-json': (input) => { ... },
